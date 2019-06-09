@@ -1282,6 +1282,7 @@ Cognito.prototype = {
 						company,
 						result.accessToken.jwtToken,
 						idToken)
+					this.dependant.init(this.config)
 					cb(err)
 				})
 			},
@@ -1315,6 +1316,7 @@ Cognito.prototype = {
 						company,
 						session.getAccessToken().getJwtToken(),
 						session.getIdToken().getJwtToken()),
+					this.dependant.init(this.config)
 					cb(null, result)
 				})
 			})
