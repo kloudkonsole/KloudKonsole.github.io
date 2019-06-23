@@ -1398,6 +1398,7 @@ pico.define('aws/s3bucket',function anonymous(exports,require,module,define,inhe
 // get html content if possible
 function getContent(node, contents, attachments){
 	switch(node.contentType.value){
+	case 'multipart/mixed':
 	case 'multipart/related':
 	case 'multipart/alternative':
 		node.childNodes.forEach(n => getContent(n, contents, attachments))
