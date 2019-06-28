@@ -266,10 +266,10 @@ Callback.prototype = {
 	toggle:function(key, state){
 		if (state){
 			var args = Array.prototype.slice.call(arguments, 2)
-			if (this.states[key]) this.states[key] = [key].concat(args)
+			this.states[key] = [key].concat(args)
 			this.trigger(key)
 		}else{
-			if (-1 !== idx) this.states[key] = void 0
+			this.states[key] = void 0
 		}
 	}
 }
@@ -531,6 +531,8 @@ function refs(id,spec,rawSpec){
 }
 
 function specLoaded(err, spec, params, userData){
+	if (err) return console.error(err)
+
 	var self = userData[0]
 	var host = self.host
 
@@ -719,7 +721,7 @@ View.prototype = {
 return View
 //# sourceURL=p/View
 })
-pico.define('cfg/xin.json','[["models","type","models",["data","routes","name","options","ums","env"]],["cache","type","cache",["name","ums","default"]],["cognito","type","aws/cognito",["company","user","config","dependant"]],["s3bucket","type","aws/s3bucket",["ums"]],["body","view",[["options","map",{"el":"body"}],["configRO","models",[["routes","map",{"read":":DOMAIN/config/mailbox/name/:name"}],["name","text","config"],["options","map",{"idAttr":"name"}],["env","ref","env"]]],["ums","cognito",[["company","text","xin.com"],["env","ref","env"],["user","models",[["routes","map",{"create":":DOMAIN/user/create"}],["options","map",{"idAttr":"username"}],["env","ref","env"]]],["config","ref","configRO"]]],["bucket","s3bucket",[["ums","ref","ums"]]],["config","models",[["routes","map",{"list":":DOMAIN/config/mailbox","create":":DOMAIN/config/mailbox","read":":DOMAIN/config/mailbox/name/:name","update":":DOMAIN/config/mailbox/:id","delete":":DOMAIN/config/mailbox/name/:name"}],["options","map",{"idAttr":"name"}],["ums","ref","ums"],["env","ref","env"]]],["inbox","models",[["ums","ref","ums"],["env","ref","env"]]],["mailboxConfig","cache",[["name","text","mbconfig"],["ums","ref","ums"],["default","map",{"sort":"time","size":25,"index":1}]]],["pages","map",{"land":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["ums","ref","ums"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["html","file","land/navbar.html"],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["land/hero","view",[["options","map",{"tag":"header","class":"jumbotron main-background"}],["html","file","land/hero.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"services","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/services.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info","class":"section","content":[{"class":"container"}]}],["html","file","land/info.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info2","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/info2.html"]]],["land/slider","view",[["options","map",{"tag":"section","id":"slider","class":"section no-padding","content":[{"id":"carousel-example","class":"carousel slide","data":{"ride":"carousel"}}]}],["html","file","land/slider.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"clients","class":"section","content":[{"class":"container"}]}],["html","file","land/clients.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"contact","class":"section section-contact","content":[{"class":"container"}]}],["html","file","land/contact.html"]]],["p/View","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"auth":["auth/layout","view",[["options","map",{"el":"body","class":"login-layout"}],["html","file","auth/layout.html"],["css","file","home/layout.css"],["models","refs","models"],["ums","ref","ums"],["auth/navbar","view",[["options","map",{"class":"navbar-fixed-top align-right"}],["html","file","auth/navbar.html"]]],["auth/title","view",[["options","map",{"class":"center"}],["tpl","file","auth/title.asp"],["appIcon","text","fa-inbox"],["appName","list",["Kloud","Konsole"]],["companyName","text","Jasa Web Services"]]],["p/View","view",[["options","map",{"class":"space-6"}]]],["auth/modal","view",[["options","map",{"class":"position-relative"}],["tpl","file","auth/modal.asp"],["ums","ref","ums"],["config","ref","configRO"],["enableRegister","bool",true]]]]],"home":["p/View","view",[["options","map",{"el":"body","class":"no-skin"}],["css","file","home/layout.css"],["ums","ref","ums"],["bucket","ref","bucket"],["models","refs","models"],["cache","refs","cache"],["p/View","view",[["options","map",{"id":"navbar","class":"navbar navbar-default ace-save-state","content":[{"id":"navbar-container","class":"navbar-container ace-save-state"}]}],["ums","ref","ums"],["p/View","view",[["options","map",{"tag":"button","id":"menu-toggler","class":"navbar-toggle menu-toggler pull-left","data":{"target":"#sidebar"},"content":[{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"}]}]]],["home/navbar-header","view",[["options","map",{"class":"navbar-header pull-left"}],["tpl","file","home/navbar-header.asp"],["icon","text","fa-inbox"],["name","text","Kloud Konsole"]]],["home/navbar-menu","view",[["options","map",{"class":"navbar-header navbar-buttons pull-right","role":"navigation","content":[{"tag":"ul","class":"nav ace-nav"}]}],["ums","ref","ums"],["home/navbar-menu-content","view",[["options","map",{"tag":"li","class":"light-blue dropdown-modal"}],["tpl","file","home/navbar-menu-content.asp"],["greet","text","Welcome,"],["photo","text","dat/gopal.png"],["icon_right","text","fa-caret-down"],["ums","ref","ums"],["home/navbar-menu-user","view",[["options","map",{"tag":"ul","class":"user-menu dropdown-menu-right dropdown-menu dropdown-yellow dropdown-caret dropdown-close"}],["ums","ref","ums"],["html","file","home/navbar-menu-user.html"]]]]]]]]],["home/main-container","view",[["options","map",{"id":"main-container","class":"main-container ace-save-state"}],["bucket","ref","bucket"],["models","refs","models"],["cache","refs","cache"],["ums","ref","ums"],["menu","models",[["data","list",[{"id":1,"perm":[],"name":"Dashboard","icon":"fa-tachometer","href":"#/dash","shortcut":123},{"id":10,"perm":[0,1],"name":"Mailbox","icon":"fa-inbox","href":"#/dash/mail","shortcut":124},{"id":20,"perm":[1,0],"name":"Settings","icon":"fa-cogs"},{"id":21,"perm":[1,0],"name":"New Email Account","icon":"far fa-plus-square","parent":20,"href":"#/dash/config/mailbox","shortcut":1548192889},{"id":22,"perm":[1,0],"name":"Email Accounts","icon":"far fa-plus-square","parent":20,"href":"#/dash/config/mailboxes","shortcut":15481929889}]]]],["home/sidebar","view",[["options","map",{"id":"sidebar","class":"sidebar responsive ace-save-state"}],["tpl","file","home/sidebar.asp"],["menu","ref","menu"],["config","ref","configRO"]]],["home/main-content","view",[["options","map",{"class":"main-content","content":[{"class":"main-content-inner"}]}],["bucket","ref","bucket"],["models","refs","models"],["cache","refs","cache"],["ums","ref","ums"],["home/breadcrumbs","view",[["options","map",{"id":"breadcrumbs","class":"breadcrumbs ace-save-state"}],["html","file","home/breadcrumbs.html"],["tpl","file","home/breadcrumb.asp"],["breadcrumbs","models",[["name","text","breadcrumbs"]]],["menu","ref","menu"]]],["p/View","view",[["options","map",{"class":"page-content"}],["bucket","ref","bucket"],["models","refs","models"],["cache","refs","cache"],["p/View","view",[["options","map",{"id":"ace-settings-container","class":"ace-settings-container"}],["html","file","home/settings-container.html"]]],["home/page-header","view",[["options","map",{"class":"page-header"}],["tpl","file","home/page-header.asp"]]],["home/page-content","view",[["options","map",{"class":"row","content":[{"class":"col-ex-12"}]}],["bucket","ref","bucket"],["models","refs","models"],["cache","refs","cache"],["ums","ref","ums"]]]]]]],["p/View","view",[["options","map",{"class":"footer","content":[{"class":"footer-inner","content":[{"class":"footer-content"}]}]}],["html","file","home/footer.html"]]],["home/scrollup","view",[["options","map",{"tag":"a","id":"btn-scroll-up","class":"btn-scroll-up btn btn-sm btn-inverse","href":"#","content":[{"tag":"i","class":"ace-icon fa fa-angle-double-up icon-only bigger-110"}]}]]]]]]],"mailbox":["email/mailbox","view",[["title","text","Mailbox"],["desc","text","jasaws-cognito-s3"],["tpl","file","email/mailbox.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"],["config","ref","mailboxConfig"]]],"mail":["email/mail","view",[["title","text","Mail"],["desc","text","mail"],["tpl","file","email/mail.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"]]],"config/mailbox":["config/mailbox","view",[["title","text","Config"],["desc","text","create a new mailbox"],["html","file","config/mailbox.html"],["config","ref","config"]]],"config/mailboxes":["config/mailboxes","view",[["title","text","Config"],["desc","text","list of your mailboxes"],["html","file","config/mailboxes.html"],["config","ref","config"]]]}],["routes","map",{"/":["land"],"/auth":["auth"],"/dash":["home"],"/dash/mail":["home","mailbox"],"/dash/mail/view/:id":["home","mail"],"/dash/config/mailbox":["home","config/mailbox"],"/dash/config/mailbox/:name":["home","config/mailbox"],"/dash/config/mailboxes":["home","config/mailboxes"]}]]]]')
+pico.define('cfg/xin.json','[["shared","type","shared",["data","routes","name","options","env"]],["models","type","models",["data","routes","name","options","ums","env"]],["cognito","type","aws/cognito",["company","user","config"]],["s3bucket","type","aws/s3bucket",["ums"]],["body","view",[["options","map",{"el":"body"}],["configRO","shared",[["routes","map",{"read":":DOMAIN/config/mailbox/name/:name"}],["name","text","config"],["options","map",{"idAttr":"name"}],["env","ref","env"]]],["ums","cognito",[["company","text","xin.com"],["env","ref","env"],["user","shared",[["routes","map",{"create":":DOMAIN/user/create"}],["options","map",{"idAttr":"username"}],["env","ref","env"]]],["config","ref","configRO"]]],["bucket","s3bucket",[["ums","ref","ums"]]],["config","models",[["routes","map",{"list":":DOMAIN/config/mailbox","create":":DOMAIN/config/mailbox","read":":DOMAIN/config/mailbox/name/:name","update":":DOMAIN/config/mailbox/:id","delete":":DOMAIN/config/mailbox/name/:name"}],["options","map",{"idAttr":"name"}],["ums","ref","ums"],["env","ref","env"]]],["inbox","models",[["name","text","inbox"],["ums","ref","ums"]]],["mails","models",[["ums","ref","ums"]]],["setting","models",[["name","text","setting"],["ums","ref","ums"],["options","map",{"idAttr":"name"}],["data","list",[{"name":"mailbox","sort":"time","size":25,"index":1}]]]],["pages","map",{"land":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["ums","ref","ums"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["html","file","land/navbar.html"],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["land/hero","view",[["options","map",{"tag":"header","class":"jumbotron main-background"}],["html","file","land/hero.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"services","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/services.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info","class":"section","content":[{"class":"container"}]}],["html","file","land/info.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info2","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/info2.html"]]],["land/slider","view",[["options","map",{"tag":"section","id":"slider","class":"section no-padding","content":[{"id":"carousel-example","class":"carousel slide","data":{"ride":"carousel"}}]}],["html","file","land/slider.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"clients","class":"section","content":[{"class":"container"}]}],["html","file","land/clients.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"contact","class":"section section-contact","content":[{"class":"container"}]}],["html","file","land/contact.html"]]],["p/View","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"auth":["auth/layout","view",[["options","map",{"el":"body","class":"login-layout"}],["html","file","auth/layout.html"],["css","file","home/layout.css"],["shared","refs","shared"],["models","refs","models"],["ums","ref","ums"],["auth/navbar","view",[["options","map",{"class":"navbar-fixed-top align-right"}],["html","file","auth/navbar.html"]]],["auth/title","view",[["options","map",{"class":"center"}],["tpl","file","auth/title.asp"],["appIcon","text","fa-inbox"],["appName","list",["Kloud","Konsole"]],["companyName","text","Jasa Web Services"]]],["p/View","view",[["options","map",{"class":"space-6"}]]],["auth/modal","view",[["options","map",{"class":"position-relative"}],["tpl","file","auth/modal.asp"],["ums","ref","ums"],["config","ref","configRO"],["enableRegister","bool",true]]]]],"home":["p/View","view",[["options","map",{"el":"body","class":"no-skin"}],["css","file","home/layout.css"],["ums","ref","ums"],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["p/View","view",[["options","map",{"id":"navbar","class":"navbar navbar-default ace-save-state","content":[{"id":"navbar-container","class":"navbar-container ace-save-state"}]}],["ums","ref","ums"],["p/View","view",[["options","map",{"tag":"button","id":"menu-toggler","class":"navbar-toggle menu-toggler pull-left","data":{"target":"#sidebar"},"content":[{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"}]}]]],["home/navbar-header","view",[["options","map",{"class":"navbar-header pull-left"}],["tpl","file","home/navbar-header.asp"],["icon","text","fa-inbox"],["name","text","Kloud Konsole"]]],["home/navbar-menu","view",[["options","map",{"class":"navbar-header navbar-buttons pull-right","role":"navigation","content":[{"tag":"ul","class":"nav ace-nav"}]}],["ums","ref","ums"],["home/navbar-menu-content","view",[["options","map",{"tag":"li","class":"light-blue dropdown-modal"}],["tpl","file","home/navbar-menu-content.asp"],["greet","text","Welcome,"],["photo","text","dat/gopal.png"],["icon_right","text","fa-caret-down"],["ums","ref","ums"],["home/navbar-menu-user","view",[["options","map",{"tag":"ul","class":"user-menu dropdown-menu-right dropdown-menu dropdown-yellow dropdown-caret dropdown-close"}],["ums","ref","ums"],["html","file","home/navbar-menu-user.html"]]]]]]]]],["home/main-container","view",[["options","map",{"id":"main-container","class":"main-container ace-save-state"}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["ums","ref","ums"],["menu","models",[["data","list",[{"id":1,"perm":[],"name":"Dashboard","icon":"fa-tachometer","href":"#/dash","shortcut":123},{"id":10,"perm":[0,1],"name":"Mailbox","icon":"fa-inbox","href":"#/dash/mail","shortcut":124},{"id":20,"perm":[1,0],"name":"Settings","icon":"fa-cogs"},{"id":21,"perm":[1,0],"name":"New Email Account","icon":"far fa-plus-square","parent":20,"href":"#/dash/config/mailbox","shortcut":1548192889},{"id":22,"perm":[1,0],"name":"Email Accounts","icon":"far fa-plus-square","parent":20,"href":"#/dash/config/mailboxes","shortcut":15481929889}]]]],["home/sidebar","view",[["options","map",{"id":"sidebar","class":"sidebar responsive ace-save-state"}],["tpl","file","home/sidebar.asp"],["menu","ref","menu"],["config","ref","configRO"]]],["home/main-content","view",[["options","map",{"class":"main-content","content":[{"class":"main-content-inner"}]}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["ums","ref","ums"],["home/breadcrumbs","view",[["options","map",{"id":"breadcrumbs","class":"breadcrumbs ace-save-state"}],["html","file","home/breadcrumbs.html"],["tpl","file","home/breadcrumb.asp"],["ums","ref","ums"],["breadcrumbs","models",[["name","text","breadcrumb"],["ums","ref","ums"]]],["menu","ref","menu"]]],["p/View","view",[["options","map",{"class":"page-content"}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["p/View","view",[["options","map",{"id":"ace-settings-container","class":"ace-settings-container"}],["html","file","home/settings-container.html"]]],["home/page-header","view",[["options","map",{"class":"page-header"}],["tpl","file","home/page-header.asp"]]],["home/page-content","view",[["options","map",{"class":"row","content":[{"class":"col-ex-12"}]}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"]]]]]]],["p/View","view",[["options","map",{"class":"footer","content":[{"class":"footer-inner","content":[{"class":"footer-content"}]}]}],["html","file","home/footer.html"]]],["home/scrollup","view",[["options","map",{"tag":"a","id":"btn-scroll-up","class":"btn-scroll-up btn btn-sm btn-inverse","href":"#","content":[{"tag":"i","class":"ace-icon fa fa-angle-double-up icon-only bigger-110"}]}]]]]]]],"mailbox":["email/mailbox","view",[["title","text","Mailbox"],["desc","text","jasaws-cognito-s3"],["tpl","file","email/mailbox.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"],["mails","ref","mails"],["setting","ref","setting"]]],"mail":["email/mail","view",[["title","text","Mail"],["desc","text","mail"],["tpl","file","email/mail.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"],["mails","ref","mails"]]],"config/mailbox":["config/mailbox","view",[["title","text","Config"],["desc","text","create a new mailbox"],["html","file","config/mailbox.html"],["config","ref","config"]]],"config/mailboxes":["config/mailboxes","view",[["title","text","Config"],["desc","text","list of your mailboxes"],["html","file","config/mailboxes.html"],["config","ref","config"]]]}],["routes","map",{"/":["land"],"/auth":["auth"],"/dash":["home"],"/dash/mail":["home","mailbox"],"/dash/mail/view/:id":["home","mail"],"/dash/config/mailbox":["home","config/mailbox"],"/dash/config/mailbox/:name":["home","config/mailbox"],"/dash/config/mailboxes":["home","config/mailboxes"]}]]]]')
 pico.define('cfg/env.json','[["env","map",{"DOMAIN":"https://xin.jasaws.com"}]]')
 pico.define('xin',function anonymous(exports,require,module,define,inherit,pico
 ) {
@@ -815,29 +817,38 @@ var cache = {
 		return storage.length
 	},
 	key: function(index){
-		var key = storage.key(index)
-		if (key) return key.split(':')
+		return storage.key(index)
 	},
-	get: function(name, id){
-		if (!name) return
-		return storage.getItem(name + ':' + id)
+	get: function(key){
+		if (!key) return
+		return storage.getItem(key)
 	},
-	set: function(name, id, value){
-		if (!name) return
-		return storage.setItem(name + ':' + id, value)
+	set: function(key, value){
+		if (!key) return
+		return storage.setItem(key, value)
 	},
-	remove: function(name, id){
-		if (!name) return
-		return storage.removeItem(name + ':' + id)
+	remove: function(key){
+		if (!key) return
+		return storage.removeItem(key)
 	},
 	clear: function(name){
-		//storage.clear()
-		if (!name) return
+		if (!name) return storage.clear()
 		for(var i=0,k; (k=storage.key(i)); i++){
 			if (0 !== k.indexOf(name)) continue
 			storage.removeItem(k)
 		}
 	}
+}
+
+function encodeCacheKey(id){
+	if (!this.name) return
+	return this.name + ':' + (id || '')
+}
+
+function decodeCacheKey(key){
+	var arr = key.split(':')
+	if (arr[0] !== this.name) return
+	return arr
 }
 
 function parse(res, cb){
@@ -885,13 +896,13 @@ function reload(coll){
 	var name = coll.name
 	var cache = coll.cache
 	if (!name || !cache) return
-	for(var i=0,arr,json,obj; (arr=cache.key(i)); i++){
-		if (arr[0] !== name) continue
+	for(var i=0,key,json,obj; (key=cache.key(i)); i++){
+		if (!coll.decodeCacheKey(key)) continue
 		try{
-			json=cache.get.apply(cache, arr)
+			json=cache.get(key)
 			obj=JSON.parse(json)
 		} catch(ex){
-			cache.remove.apply(cache, arr)
+			cache.remove(key)
 			continue
 		}
 		populate(coll, obj[coll.idAttr], obj)
@@ -914,13 +925,13 @@ function set(coll,obj){
 	}
 	model = populate(coll, id, obj)
 	coll.callback.trigger(evt,coll,id)
-	coll.cache.set(coll.name, id, JSON.stringify(obj))
+	coll.cache.set(coll.encodeCacheKey(id), JSON.stringify(obj))
 	return model
 }
 function get(coll,id){
 	var model=coll.models[id]
 	if (model) return model
-	var json=coll.cache.get(coll.name, id)
+	var json=coll.cache.get(coll.encodeCacheKey(id))
 	if (!json) return
 	try {
 		return populate(coll, id, JSON.parse(json))
@@ -935,7 +946,7 @@ function update(){
 	coll.ajax('put', buildRest(coll, coll.routes.update, model), model, function(err,res){
 		if (err) throw err
 		coll.callback.trigger('update',coll,id)
-		coll.cache.set(coll.name, id, JSON.stringify(model))
+		coll.cache.set(coll.encodeCacheKey(id), JSON.stringify(model))
 	}, coll)
 }
 function remove(coll,id){
@@ -950,24 +961,21 @@ function remove(coll,id){
 		coll.models[id] = void 0
 	}
 
-	coll.cache.remove(coll.name, id)
+	coll.cache.remove(coll.encodeCacheKey(id))
 }
 function clear(){
 	this.modelIndex=[]
 	this.models={}
 	this.callback.trigger('clear')
-	this.cache.clear(this.name)
+	this.cache.clear(this.encodeCacheKey())
 }
 
 function Collection(seed, routes){
 	this.routes = routes || {}
 	this.rest = compileRest(this.routes)
 	this.idAttr = 'id'
-	this.ajax = ajax
-	this.parse = parse
 	this.modelIndex = []
 	this.models = {}
-	this.cache = cache
 	this.callback = new Callback
 
 	this.init.apply(this, Array.prototype.splice.call(arguments, 2))
@@ -981,13 +989,17 @@ Collection.prototype={
 	init:function(name, opt){
 		this.name = name || this.name
 		opt = opt || {}
-		this.ajax = opt.ajax || this.ajax
 		this.idAttr = opt.idAttr || this.idAttr
-		this.parse = opt.parse || this.parse
 		this.relativePath = opt.relativePath || false
 		this.restParams = opt.restParams || {}
 	},
 	fini:function(){},
+
+	ajax,
+	parse,
+	cache,
+	encodeCacheKey,
+	decodeCacheKey,
 
 	load:function(models,cb){
 		cb=cb||dcb
@@ -1129,10 +1141,52 @@ Collection.prototype={
 return Collection
 //# sourceURL=po/Collection
 })
-pico.define('models',function anonymous(exports,require,module,define,inherit,pico
+pico.define('shared',function anonymous(exports,require,module,define,inherit,pico
 ) {
 "use strict";
 const Collection = inherit('po/Collection')
+
+function ajax(method, route, params, cb){
+	if (!route) return cb(null, params)
+
+	const headers = {
+		'Content-Type': 'application/json'
+	}
+
+	pico.ajax(method, route, params, {headers}, function(err, state, res){
+		if (4 !== state) return
+		if (err) return cb(err)
+		try {
+			var obj = JSON.parse(res)
+		} catch(ex) {
+			return cb(ex)
+		}
+		cb(null, obj.Contents ? obj.Contents : obj)
+	})
+}
+
+return {
+	init(name, opt, restParams){
+		opt = Object.assign({}, opt, {restParams})
+		Collection.prototype.init.call(this, name, opt)
+	},
+	setSelected(key){
+		if (!this.name || !this.get(key)) return
+
+		return window.localStorage.setItem('sel:config', key)
+	},
+	getSelected(){
+		const key = window.localStorage.getItem('sel:config')
+		return this.get(key)
+	},
+	ajax,
+}
+//# sourceURL=shared
+})
+pico.define('models',function anonymous(exports,require,module,define,inherit,pico
+) {
+"use strict";
+const shared = inherit('shared')
 
 function getAccessToken(ctx, cb){
 	if (!ctx.ums) return cb()
@@ -1155,9 +1209,9 @@ function ajax(method, route, params, cb){
 		pico.ajax(method, route, params, {headers}, function(err, state, res){
 			if (4 !== state) return
 			if (err) return cb(err)
-			try{
+			try {
 				var obj = JSON.parse(res)
-			} catch(ex){
+			} catch(ex) {
 				return cb(ex)
 			}
 			cb(null, obj.Contents ? obj.Contents : obj)
@@ -1165,45 +1219,30 @@ function ajax(method, route, params, cb){
 	})
 }
 
+function encodeCacheKey(id){
+	if (!this.name) return
+	const uid = this.ums.getId()
+	if (!uid) return
+	return this.name + ':' + uid + ':' + id
+}
+
+function decodeCacheKey(key){
+	var arr = key.split(':')
+	if (arr[0] !== this.name) return
+	if (arr[1] !== this.ums.getId()) return
+	return arr
+}
+
 return {
 	init(name, opt, ums, restParams){
 		this.ums = ums
-		opt = Object.assign({}, opt, {restParams})
-		Collection.prototype.init.call(this, name, Object.assign({ajax}, opt))
+		shared.prototype.init.call(this, name, opt, restParams)
 	},
-	setSelected(key){
-		if (!this.name || !this.get(key)) return
-
-		return window.localStorage.setItem(`sel:${this.name}`, key)
-	},
-	getSelected(){
-		const key = window.localStorage.getItem(`sel:${this.name}`)
-		return this.get(key)
-	}
+	ajax,
+	encodeCacheKey,
+	decodeCacheKey,
 }
 //# sourceURL=models
-})
-pico.define('cache',function anonymous(exports,require,module,define,inherit,pico
-) {
-"use strict";
-function Cache(name, ums, def){
-	this.name = name
-	this.ums = ums
-	this.def = def
-	this.data = {}
-}
-
-Cache.prototype = {
-	set(name, value){
-		this.data[name] = value
-	},
-	get(name){
-		return this.data[name] || this.def[name]
-	}
-}
-
-return Cache
-//# sourceURL=cache
 })
 pico.define('aws/cognito',function anonymous(exports,require,module,define,inherit,pico
 ) {
@@ -1359,6 +1398,12 @@ Cognito.prototype = {
 		const user = this.userPool.getCurrentUser()
 		if (!user) return
 		user.signOut()
+		this.callback.trigger('unload')
+	},
+	getId(){
+		const user = this.userPool.getCurrentUser()
+		if (!user) return 0
+		return user.username || 0
 	},
 	getAccessToken(cb){
 		const user = this.userPool.getCurrentUser()
@@ -1426,15 +1471,33 @@ function getContent(node, contents, attachments){
 	}
 }
 
-function readMails(ctx, mails, inbox, cb){
-	if (!mails || !mails.length) return cb()
+function readMails(ctx, list, inbox, mails, cb){
+	if (!list || !list.length) return cb()
 
-	const mail = mails.shift()
-	console.log('reading', mail.Key, mail.Size)
+	const item = list.shift()
+	if (inbox.get(item.Key)) return readMails(ctx, list, inbox, mails, cb)
+	console.log('reading', item.Key, item.Size)
 
-	ctx.read(mail.Key, inbox, err => {
+	ctx.read(item.Key, inbox, mails, err => {
 		if (err) return cb(err)
-		return readMails(ctx, mails, inbox, cb)
+		return readMails(ctx, list, inbox, mails, cb)
+	})
+}
+
+function list(ctx, params, inbox, mails, cb){
+	ctx.ums.getAccessToken(err => {
+		if (err) return cb(err)
+		ctx.s3.listObjectsV2(params, (err, bucket) => {
+			if (err) return cb(err)
+			readMails(ctx, bucket.Contents, inbox, mails, err => {
+				if (err) return cb(err)
+				if (bucket.IsTruncated){
+					params.ContinuationToken = bucket.NextContinuationToken
+					return list(ctx, params, inbox, mails, cb)
+				}
+				cb()
+			})
+		})
 	})
 }
 
@@ -1454,18 +1517,12 @@ S3Bucket.prototype = {
 		this.awsConfig = aws
 		this.Bucket = aws.Bucket
 	},
-	list(inbox, cb){
-		this.ums.getAccessToken(err => {
-			if (err) return cb(err)
-			this.s3.listObjects({Bucket: this.Bucket}, (err, bucket) => {
-				if (err) return cb(err)
-				readMails(this, bucket.Contents, inbox, cb)
-			})
-		})
+	list(inbox, mails, cb){
+		list(this, {Bucket: this.Bucket}, inbox, mails, cb)
 	},
-	read(Key, inbox, cb){
-		let mail = inbox.get(Key)
-		if (mail) return cb(null, mail)
+	read(Key, inbox, mails, cb){
+		let mail = mails.get(Key)
+		if (mail) return cb(null, inbox.get(Key), mail)
 
 		const params = {
 			Bucket: this.Bucket,
@@ -1486,6 +1543,10 @@ S3Bucket.prototype = {
 						sender: headers.from[0].value[0].name,
 						time: new Date(headers.date[0].value),
 						subject: headers.subject[0].value,
+						attachments: attachments.length
+					})
+					mails.create({
+						id: Key,
 						headers,
 						body: contents['text/html'] || contents['text/plain'],
 						attachments
@@ -1494,7 +1555,7 @@ S3Bucket.prototype = {
 					// supress parse exception
 					return cb(exp)
 				}
-				cb(null, inbox.get(Key))
+				cb(null, inbox.get(Key), mails.get(Key))
 			})
 		})
 	}
@@ -1782,7 +1843,7 @@ return {
 //# sourceURL=land/hero
 })
 pico.define('land/hero.html','<img src="dat/home-bg.jpg" class="img-main-background" data-src="https://pixabay.com/en/apple-steve-jobs-quotes-scrabble-758334/" />\n\n<div class="container pos-rel">\n	<div class="text-center">\n		<h2 class="light-green">Welcome to our page</h2>\n		<h1 class="white">LANDING PAGE</h1>\n		<h3 class="light-blue">We provide <span class="orange2 bigger-110">Jasa web services</span> and tools to meet your business needs</h3>\n		<br />\n		<br />\n		<br />\n		<br />\n		<br />\n		<a class="btn btn-purple btn-lg no-border bigger-150" href="#" role="button">&nbsp; Learn more &nbsp;</a>\n	</div>\n</div>\n')
-pico.define('land/services.html','<div class="row">\n	<div class="text-center">\n		<h2 class="text-primary">Services</h2>\n		<h3 class="text-muted">Lorem ipsum dolor sit amet consectetur.</h3>\n	</div>\n</div>\n<div class="space-4"></div>\n<div class="row text-center">\n	<div class="col-md-4">\n		<span class="fa-stack fa-4x">\n			<i class="fa fa-circle fa-stack-2x text-primary"></i>\n			<i class="fa fa-laptop fa-stack-1x fa-inverse"></i>\n		</span>\n		<h4 class="text-info">Responsive Design</h4>\n		<p class="text-muted align-justify">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Minima maxime quam architecto quo inventore harum ex magni, dicta impedit.</p>\n	</div>\n	\n	<div class="col-md-4">\n		<span class="fa-stack fa-4x">\n			<i class="fa fa-circle fa-stack-2x text-primary"></i>\n			<i class="fa fa-cloud fa-stack-1x fa-inverse"></i>\n		</span>\n		<h4 class="text-info">Cloud Computing</h4>\n		<p class="text-muted align-justify">Aenean lacinia bibendum nulla sed consectetur. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum.</p>\n	</div>\n	\n	<div class="col-md-4">\n		<span class="fa-stack fa-4x">\n			<i class="fa fa-circle fa-stack-2x text-primary"></i>\n			<i class="fa fa-pie-chart fa-stack-1x fa-inverse"></i>\n		</span>\n		<h4 class="text-info">Data Analysis</h4>\n		<p class="text-muted align-justify">Veniam marfa mustache skateboard, adipisicing fugiat velit pitchfork beard. Freegan beard aliqua cupidatat mcsweeney&#039;s vero.</p>\n	</div>\n</div>\n')
+pico.define('land/services.html','<div class="row">\n	<div class="text-center">\n		<h2 class="text-primary">Services</h2>\n		<h3 class="text-muted">Lorem ipsum dolor sit amet consectetur.</h3>\n	</div>\n</div>\n<div class="space-4"></div>\n<div class="row text-center">\n	<div class="col-md-4">\n		<span class="fa-stack fa-4x">\n			<i class="fa fa-circle fa-stack-2x text-primary"></i>\n			<i class="fa fa-laptop fa-stack-1x fa-inverse"></i>\n		</span>\n		<h4 class="text-info">Responsive Design</h4>\n		<p class="text-muted align-justify">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Minima maxime quam architecto quo inventore harum ex magni, dicta impedit.</p>\n	</div>\n	\n	<div class="col-md-4">\n		<span class="fa-stack fa-4x">\n			<i class="fa fa-circle fa-stack-2x text-primary"></i>\n			<i class="fa fa-cloud fa-stack-1x fa-inverse"></i>\n		</span>\n		<h4 class="text-info">Cloud Computing</h4>\n		<p class="text-muted align-justify">Aenean lacinia bibendum nulla sed consectetur. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum.</p>\n	</div>\n	\n	<div class="col-md-4">\n		<span class="fa-stack fa-4x">\n			<i class="fa fa-circle fa-stack-2x text-primary"></i>\n			<i class="fa fa-pie-chart fa-stack-1x fa-inverse"></i>\n		</span>\n		<h4 class="text-info">Data Analysis</h4>\n		<p class="text-muted align-justify">Veniam marfa mustache skateboard, adipisicing fugiat velit pitchfork beard. Freegan beard aliqua cupidatat mcsweeney&#39;s vero.</p>\n	</div>\n</div>\n')
 pico.define('land/info.html','<div class="row">\n	<div class="col-lg-5 col-sm-6 col-lg-offset-1 text-center">\n		<img alt="Section Image" src="dat/ace.png" width="250" class="img-responsive" />\n	</div>\n\n	<div class="col-lg-5 col-sm-6">\n		<h2 class="text-primary"><i class="ace-icon fa fa-dashboard orange"></i>&nbsp; Section heading</h2>	\n		<div class="hr"></div>\n		<p>\n			Justo odio, dapibus ac facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus.\n			<br />\n			Donec sed odio dui. Nullam quis risus eget urna mollis ornare vel eu leo. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.\n		</p>\n	</div>						\n</div>\n')
 pico.define('land/info2.html','<div class="row">\n	<div class="col-lg-5 col-sm-6 col-lg-offset-1">\n		<h2 class="text-primary"><i class="ace-icon fa fa-bar-chart green"></i>&nbsp; Section heading</h2>	\n		<div class="hr"></div>\n		<p> Cras sit amet nibh libero, in gravida nulla. Nulla vel metus scelerisque ante sollicitudin commodo. Cras purus odio, vestibulum in vulputate at, tempus viverra turpis. Fusce condimentum nunc ac nisi vulputate fringilla. Donec lacinia congue felis in faucibus.</p>\n	</div>\n	<div class="col-lg-5 col-lg-offset-1 col-sm-6 text-center">\n		<img alt="Section Image" width="250" src="dat/ace.png" class="img-responsive inline" />\n	</div>\n</div>\n')
 pico.define('land/slider',function anonymous(exports,require,module,define,inherit,pico
@@ -2178,7 +2239,7 @@ return {
 	deps: {
 		tpl: 'file',
 		menu: 'models',
-		breadcrumbs: 'models'
+		breadcrumbs: 'models',
 	},
 	create(deps, params){
 		this.super.create.call(this, deps, params)
@@ -2322,7 +2383,7 @@ const DATE_OPTIONS = { day: 'numeric', month: 'short' }
 function mailTime(time, now){
 	if (time.getFullYear() !== now.getFullYear())
 		return time.toLocaleDateString()
-	if (time.getMonth() === now.getMonth() && time.getDay() === now.getDay())
+	if (time.getMonth() === now.getMonth() && time.getDate() === now.getDate())
 		return time.toLocaleTimeString(LOCALE, TIME_OPTIONS)
 	return time.toLocaleDateString(LOCALE, DATE_OPTIONS)
 }
@@ -2347,7 +2408,7 @@ function renderMail(item, now = new Date) {
 		<span class=sender title="${item.sender}">${item.sender} </span>
 		<span class=time>${mailTime(new Date(item.time), now)}</span>
 	`
-	if (item.attachments.length) {
+	if (item.attachments) {
 		mail += '<span class=attachment><i class="ace-icon fa fa-paperclip"></i></span>'
 	}
 	mail += '<span class=summary>'
@@ -2384,18 +2445,19 @@ function countUnread(inbox){
 
 function refresh(ctx){
 	const {
-		config,
 		tpl,
-		inbox
+		inbox,
+		setting,
 	} = ctx.deps
-	const pageSort = config.get('sort')
-	const pageSize = config.get('size')
+	const config = setting.get('mailbox')
+	const pageSort = config.sort
+	const pageSize = config.size
 	inbox.sort(sortCB(pageSort))
 
 	ctx.el.innerHTML = tpl({
 		inbox,
 		renderMail,
-		pageIndex: config.get('index'),
+		pageIndex: config.index,
 		pageMax: Math.ceil(inbox.length() / pageSize),
 		pageSize,
 		pageSort,
@@ -2405,13 +2467,15 @@ function refresh(ctx){
 
 return {
 	deps: {
-		bucket: 's3bucket',
-		inbox: 'models',
-		config: 'cache',
 		tpl: 'file',
+		mails: 'models',
+		inbox: 'models',
+		setting: 'models',
+		bucket: 's3bucket',
 	},
 	create(deps, params){
-		deps.bucket.list(deps.inbox, err => {
+		refresh(this)
+		deps.bucket.list(deps.inbox, deps.mails, err => {
 			if (err) return alert(err)
 			refresh(this)
 		})
@@ -2422,17 +2486,17 @@ return {
 		},
 		'click a.orderby': function(evt, target){
 			evt.preventDefault()
-			const type = target.href.split('#')[1]
-			const config = this.deps.config
-			if (config.get('sort') === type) return
-			config.set('sort', type)
+			const sort = target.href.split('#')[1]
+			const config = this.deps.setting.get('mailbox')
+			if (config.sort === sort) return
+			config.sort = sort
 			refresh(this)
 		},
 		'click ul.pagination li a': function(evt, target){
 			evt.preventDefault()
 			if (target.classList.contains('disabled')) return
-			const config = this.deps.config
-			let index = config.get('index')
+			const config = this.deps.setting.get('mailbox')
+			let index = config.index
 			switch(target.href.split('#')[1]){
 			case 'first':
 				index = 1
@@ -2444,12 +2508,12 @@ return {
 				index += 1
 				break
 			case 'last':
-				index = Math.ceil(this.deps.inbox.length() / this.deps.config.get('size'))
+				index = Math.ceil(this.deps.inbox.length() / config.size)
 				break
 			default:
 				return
 			}
-			config.set('index', index)
+			config.index = index
 			refresh(this)
 		}
 	}
@@ -2517,18 +2581,19 @@ function replaceCID(el, attachments){
 
 return {
 	deps: {
-		bucket: 's3bucket',
+		tpl: 'file',
 		inbox: 'models',
-		tpl: 'file'
+		mails: 'models',
+		bucket: 's3bucket',
 	},
 	create(deps, params){
-		deps.bucket.read(params.id, deps.inbox, (err, mail) => {
+		deps.bucket.read(params.id, deps.inbox, deps.mails, (err, item, mail) => {
 			const content = new TextDecoder('utf-8').decode(new Uint8Array(mail.body))
 			const attachments = decodeAttachment(mail.attachments, [])
 			this.el.innerHTML = deps.tpl({
-				sender: mail.sender,
-				time: mail.time,
-				subject: mail.subject,
+				sender: item.sender,
+				time: item.time,
+				subject: item.subject,
 				content,
 				attachments,
 				attachmentSize: attachmentSize(mail.attachments)
