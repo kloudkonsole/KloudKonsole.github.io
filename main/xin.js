@@ -265,8 +265,9 @@ Callback.prototype = {
 	toggle:function(key, state){
 		if (state){
 			var args = Array.prototype.slice.call(arguments, 2)
+			var oldState = this.states[key]
 			this.states[key] = [key].concat(args)
-			this.trigger(key)
+			if (!oldState) this.trigger(key)
 		}else{
 			this.states[key] = void 0
 		}
@@ -1404,6 +1405,7 @@ Cognito.prototype = {
 		this.callback.trigger('unload')
 	},
 	getId(){
+		if (!this.userPool) return 0
 		const user = this.userPool.getCurrentUser()
 		if (!user) return 0
 		return user.username || 0
@@ -1733,9 +1735,14 @@ return {
 			}
 
 			deps.ums.callback.on('ready', () => {
+				router.off('change',pageChanged,this)
 				router.on('change',pageChanged,this).start(deps.routes)
 			})
 		})
+	},
+	remove: function(){
+		router.off('change',pageChanged,this)
+		this.super.remove.call(this)
 	},
 	slots: {
 		moduleAdded: function(from, sender){
