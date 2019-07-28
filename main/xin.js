@@ -1260,7 +1260,7 @@ const Callback = require('po/Callback')
 function setAWSConfig(aws, token, cb){
 	const region = aws.IdentityPoolId.split(':')[0]
 	AWS.config.update({
-		region: aws.region,
+		region: region,
 		credentials: new AWS.CognitoIdentityCredentials({
 			IdentityPoolId: aws.IdentityPoolId,
 			Logins: {
@@ -1521,7 +1521,7 @@ S3Bucket.prototype = {
 		if (!selected) return
 		const aws = selected.env
 		if (!aws) return
-		this.s3 = new AWS.S3({apiVersion: '2006-03-01'})
+		this.s3 = new AWS.S3({region: aws.region, apiVersion: '2006-03-01'})
 		this.awsConfig = aws
 		this.Bucket = aws.Bucket
 	},
