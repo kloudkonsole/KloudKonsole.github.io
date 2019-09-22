@@ -20,7 +20,7 @@ return {
 	run: function(ctx, name, type, params, rawSpec, klass, cb){
 		var _arguments = arguments
 		specMgr.load(ctx, params, rawSpec, function(err, spec){
-			if (err) return cb(err)
+			if (err) return cb(null, rawSpec)
 
 			var cargs = map[type]
 			if (!cargs) return cb(null, spec)
@@ -67,6 +67,12 @@ var
 			if (id === o[ID]) return all?o:o[VALUE]
 		}
 	},
+	nearest = function(id, host, all){
+		if (!host) return
+		var ret = find(id, host.spec, all)
+		if (ret) return ret
+		return nearest(id, host.host, all)
+	},
 	findAll = function(cond, list, by, all){
 		var arr = []
 		for(var i=0,o; (o=list[i]); i++){
@@ -89,47 +95,53 @@ var
 			loadDeps(links, idx, cb, pObj.extend(klass || {}, mod, extOpt))
 		})
 	},
-	load = function(ctx, params, spec, idx, deps, cb, userData){
+	load = function(host, params, spec, idx, deps, cb, userData){
+		if (!Array.isArray(spec)) return cb('invalid spec: ' + JSON.stringify(spec))
 		if (spec.length <= idx) return cb(null, deps, params, userData)
 		var s = spec[idx++]
+		if (!s) return load(host, params, spec, idx, deps, cb, userData)
 		var t = s[TYPE]
 		var f
 
 		switch(t){
 		case 'ref': //ID[id] TYPE[ref] VALUE[orgId]
-			f = find(s[VALUE], ctx, true)
+			f = nearest(s[VALUE], host, true)
 			if (!f) return cb(ERR1.replace('REF', s[VALUE]), deps, params, userData)
 			deps.push(create(s[ID], f[TYPE], f[VALUE]))
 			break
 		case 'refs': // ID[id] TYPE[refs] VALUE[orgType]
-			Array.prototype.push.apply(deps, findAll(s[VALUE], ctx, TYPE, 1))
+			Array.prototype.push.apply(deps, findAll(s[VALUE], host.spec || [], TYPE, 1))
 			break
 		case 'type':
 			return make.define(s[ID], s[VALUE], s[EXTRA], function(){
-				load(ctx, params, spec, idx, deps, cb, userData)
+				load(host, params, spec, idx, deps, cb, userData)
 			})
 		case 'model':
-			f = find(s[VALUE], ctx, true)
+			f = nearest(s[VALUE], host, true)
 			if (!f) return cb(ERR1.replace('REF', s[VALUE]), deps, params, userData)
 			var e = s[EXTRA]
-			e = 'string' === typeof e ? e : params[e]
-			var m = 'string' === typeof e ? f[VALUE].get(e) : f[VALUE].at(e)
+			if (null == e) return cb(ERR2.replace('REF', s[VALUE]).replace('RECORD',e), deps, params, userData)
+			var m
+			if (e.charAt){
+				m = f[VALUE].get(params[e])
+			}else{
+				m = f[VALUE].at(e)
+			}
 			if (!m) return cb(ERR2.replace('REF', s[VALUE]).replace('RECORD',e), deps, params, userData)
 			deps.push(create(s[ID], t, m))
 			break
-		case 'ctrl':
-		case 'view': // ID[id/path] TYPE[ctrl/view] VALUE[spec] EXTRA[path/path+mixins]
+		case 'view': // ID[id/path] TYPE[view] VALUE[spec] EXTRA[path/path+mixins]
 			f=s[ID]
 			return loadDeps(s[EXTRA]||f, 0, function(err, klass){
 				if (err) return cb(err, deps, params, userData)
 				deps.push(create(f, t, s[VALUE], klass))
-				load(ctx, params, spec, idx, deps, cb, userData)
+				load(host, params, spec, idx, deps, cb, userData)
 			})
 		case 'file': // ID[id] TYPE[file] VALUE[path]
 			return require(s[VALUE], function(err, mod){
 				if (err) return cb(err, deps, params, userData)
 				deps.push(create(s[ID], t, mod, s[VALUE]))
-				load(ctx, params, spec, idx, deps, cb, userData)
+				load(host, params, spec, idx, deps, cb, userData)
 			})
 		case 'param': // ID[id] TYPE[param] VALUE[index]
 			deps.push(create(s[ID], t, params[s[VALUE]]))
@@ -151,12 +163,13 @@ var
 			return loadDeps(s[EXTRA],0,function(err,klass){
 				f=s[ID]
 				make.run(deps, f, t, params, s[VALUE], klass, function(err, instance){
+					if (err) return cb(err, deps, params, userData)
 					deps.push(create(f, t, instance))
-					load(ctx, params, spec, idx, deps, cb, userData)
+					load(host, params, spec, idx, deps, cb, userData)
 				})
 			})
 		}
-		load(ctx, params, spec, idx, deps, cb, userData)
+		load(host, params, spec, idx, deps, cb, userData)
 	},
 	// need to get original spec, the one before spec.load, no way to diff ref and models
 	unload = function(rawSpec, spec){
@@ -189,11 +202,12 @@ var
 return {
 	load:function(host, params, spec, cb, userData){
 		if (!spec || !spec.length) return cb(null, spec, params, userData)
-		load(host?host.spec||host:[], params, spec, 0, [], cb, userData)
+		load(host && host.length ? {spec:host} : host || {}, params, spec, 0, [], cb, userData)
 	},
 	unload:unload,
 	find:find,
-	findAllById: function(cond, list, all){
+	nearest:nearest,
+	findAllById:function(cond, list, all){
 		return findAll(cond, list, ID, all)
 	},
 	findAllByType:function(cond, list, all){
@@ -387,81 +401,15 @@ return Module
 pico.define('p/sigslot',function anonymous(exports,require,module,define,inherit,pico
 ) {
 "use strict";
-var specMgr=require('p/specMgr')
 var evts=[]
-var middlewares=[]
 
-function addMW(arr){
-	for(var i=0,a; (a=arr[i]); i++){
-		middlewares.push(specMgr.getValue(a))
+this.update= function(){
+	for(var i=0, l=evts.length, e; i < l; i++){
+		e=evts.shift()
+		dispatch.call(e[0], e[1], e[2])
 	}
 }
-function applyMW(mws,evt,args,cb){
-	if (!mws.length) return cb(evt,args)
-	var mw=mws.shift()
-	var next=function(evt,args){
-		if (!evt) return cb(evt,args)
-		applyMW(mws,evt,args,cb)
-	}
-	if (mw instanceof Function) mw(evt,args,next)
-	else if (mw.run) mw.run(evt,args,next)
-	else applyMW(mws,evt,args,cb)
-}
-function sigslot(self, def){
-	var signals = {}
 
-    ;(self.signals||[]).concat(def||[]).forEach(function(evt){
-		var sender = this
-		signals[evt] = function(){
-			return {
-				args: Array.prototype.slice.call(arguments),
-				sender: sender,
-				evt: evt,
-				mws:[],
-				queue: false,
-				run:run,
-				send: proc,
-				sendNow: procNow
-			}
-		}
-	}, self)
-
-	self.callback.on('*', recv, self)
-
-	return signals
-}
-function remove(signals){
-	var keys = Object.keys(signals)
-	var signal
-	keys.forEach(function(key){
-		signal = signals[key]()
-		signal.args.length = 0
-		signal.mws.length = 0
-		delete signals[key]
-	})
-}
-function run(mw){
-	if (mw instanceof Function)this.mws.push(mw)
-	else if (mw.length) Array.prototype.push.apply(this.mws,mw)
-	return this
-}
-function proc(a, next){
-	var self=this
-	applyMW(this.mws.concat(middlewares),this.evt,this.args,function(evt,args){
-		if (!evt) return console.warn(self.evt,'signal aborted',args)
-		self.evt=evt
-		self.args=args
-		;(next || send).call(self,a)
-	})
-}
-function procNow(a){
-	proc.call(this, a, dispatch)
-}
-function send(a, from){
-	if (this.sender._removed) return
-	this.queue=true
-	evts.push([this, a, from||this.sender])
-}
 function recv(evt, from, params){
 	var func = this.slots[evt]
 	var forward = true
@@ -470,6 +418,13 @@ function recv(evt, from, params){
 	if (from===this) return // prevent trigger twice from extra 'from'
 	if (forward) (params.queue?send:dispatch).call(params, [from,this], this)
 }
+
+function send(a, from){
+	if (this.sender._removed) return
+	this.queue = true
+	evts.push([this, a, from||this.sender])
+}
+
 function dispatch(a, from){
 	if (this.sender._removed) return
 	from=from||this.sender
@@ -488,21 +443,46 @@ function dispatch(a, from){
 	}
 }
 
-this.update= function(){
-	for(var i=0,l=evts.length,e; i<l; i++){
-		e=evts.shift()
-		dispatch.call(e[0], e[1], e[2])
+var Signal = {
+	get(target, propKey, receiver){
+		if (!target.signals.includes(propKey)) return
+		return function(){
+			return {
+				sender: target,
+				evt: propKey,
+				args: Array.prototype.slice.call(arguments),
+				queue: false,
+				send: send,
+				sendNow: dispatch,
+			}
+		}
 	}
 }
 
 return {
-	create:sigslot,
-	remove:remove,
-	addMiddleware:addMW
+	create(self, def){
+		if (def) {
+			self.signals = (self.signals || []).concat(def)
+		}
+		if (self.signals){
+			var sigslot = Proxy.revocable(self, Signal)
+			self._sigslot = sigslot
+			self.signal = sigslot.proxy
+		}
+		self.callback.on('*', recv, self)
+	},
+	remove(self){
+		self.callback.off('*', recv)
+		if (!self._sigslot) return
+		var ss = self._sigslot
+		if (!ss) return
+		self._sigslot = self.signal = void 0
+		ss.revoke()
+	}
 }
 //# sourceURL=p/sigslot
 })
-pico.define('p/Ctrl',function anonymous(exports,require,module,define,inherit,pico
+pico.define('p/View',function anonymous(exports,require,module,define,inherit,pico
 ) {
 "use strict";
 var STD_SIGNALS=['moduleAdded']
@@ -557,20 +537,49 @@ function specLoaded(err, spec, params, userData){
 	host.spawn(chains.shift(), params, chains[chains.length-1], chains)
 }
 
-function Ctrl(name, specRaw, params, host, chains){
+function style(csss){
+	if (!csss) return csss
+	var obj = {}
+	for (var i = 0, css; (css = csss[i]); i++){
+		obj[specMgr.getExtra(css)] = specMgr.getValue(css)
+	}
+	return obj
+}
+
+function setContentToFirstChild(opt, content){
+	if (!content) return
+	if (Array.isArray(opt.content)) return setContentToFirstChild(opt.content[0], content)
+	opt.content = content
+}
+
+function View(name, specRaw, params, host, chains){
 	Module.call(this, name)
 
 	this._specRaw = specRaw
 	this.host = host
 	this.modules = []
-	this.super = Ctrl.prototype
-	this.signals = sigslot.create(this, STD_SIGNALS)
+	this.super = View.prototype
+	sigslot.create(this, STD_SIGNALS)
 
 	host && specMgr.load(host, params||null, specRaw, specLoaded, [this, chains])
 }
 
-Ctrl.prototype = {
+View.prototype = {
 	initialize: function(spec, params, cb){
+		var opt = specMgr.getViewOptions(spec)
+		// view must contain an options
+		if (!opt){
+			opt = {}
+			spec.push(['options','map',opt])
+		}
+		// override content with html spec if any
+		setContentToFirstChild(opt, specMgr.find('html',spec))
+
+		var css = specMgr.findAllById('css',spec,true)
+		opt.style = style(css)
+
+		this.start(opt)
+
 		this.spec = spec
 
 		var deps = {}
@@ -583,9 +592,8 @@ Ctrl.prototype = {
 			case REFS:
 				deps[k]=refs(k,spec,this._specRaw)
 				break
-			case 'ctrl':
 			case 'view':
-				deps[k]=specMgr.find(k, spec, true)
+				deps[k]=specMgr.nearest(k, this, true)
 				break
 			default:
 				s=specMgr.findAllById(k, spec)
@@ -607,9 +615,10 @@ Ctrl.prototype = {
 		this.spawnBySpec(this.spec, params, [], cb)
 	},
 	remove: function(){
-		sigslot.remove(this.signals)
+		sigslot.remove(this)
 		this.clear()
-		this.signals = this.deps = this.spec = this._specRaw = void 0
+		this.deps = this.spec = this._specRaw = void 0
+		this.stop()
 	},
 	clear: function(){
 		var ms = this.modules
@@ -618,86 +627,11 @@ Ctrl.prototype = {
 		}
 		ms.length = 0
 	},
-	spawn: function(Mod, params, extraSpec, chains){
-		if (!Mod || !Mod.length) return
-
-		return new (Ctrl.extend(specMgr.getExtra(Mod)))(
-			specMgr.getId(Mod),
-			(extraSpec||[]).concat(specMgr.getValue(Mod)||[]),
-			params,
-			this,
-			chains instanceof Function ? [chains, extraSpec] : chains
-		)
-	},
-	spawnBySpec: function(spec, params, extraSpec, cb, list){
-		list = (list || []).concat(specMgr.findAllByType('ctrl', spec, true))
-		if (!list.length) return  cb && cb()
-		list.push(cb, extraSpec)
-		return this.spawn(list.shift(), params, extraSpec, list)
-	},
-	slots: {
-	}
-}
-
-return Ctrl
-//# sourceURL=p/Ctrl
-})
-pico.define('p/View',function anonymous(exports,require,module,define,inherit,pico
-) {
-"use strict";
-var Ctrl = inherit('p/Ctrl')
-var specMgr = require('p/specMgr')
-
-function style(csss){
-	if (!csss) return csss
-	var obj = {}
-	for (var i = 0, css; (css = csss[i]); i++){
-		obj[specMgr.getExtra(css)] = specMgr.getValue(css)
-	}
-	return obj
-}
-
-function setContentToFirstChild(opt, content){
-	if (!content) return
-	if (Array.isArray(opt.content)) return setContentToFirstChild(opt.content[0], content)
-	opt.content = content
-}
-
-function View(name, specRaw, params, host, chains){
-	Ctrl.apply(this, arguments)
-
-	this.super = View.prototype
-}
-
-View.prototype = {
-	initialize: function(spec, params, cb){
-		var opt = specMgr.getViewOptions(spec)
-		// view must contain an options
-		if (!opt){
-			opt = {}
-			spec.push(['options','map',opt])
-		}
-		// override content with html spec if any
-		setContentToFirstChild(opt, specMgr.find('html',spec))
-
-		var css = specMgr.findAllById('css',spec,true)
-		opt.style = style(css)
-
-		this.start(opt)
-
-		Ctrl.prototype.initialize.apply(this, arguments)
-	},
-	remove: function(){
-		Ctrl.prototype.remove.call(this)
-		this.stop()
-	},
 	render: function(){
 		return this.el
 	},
 	spawn: function(Mod, params, extraSpec, chains){
 		if (!Mod || !Mod.length) return
-
-		if ('ctrl' === specMgr.getType(Mod)) return Ctrl.prototype.spawn.apply(this, arguments)
 
 		return new (View.extend(specMgr.getExtra(Mod)))(
 			specMgr.getId(Mod),
@@ -707,22 +641,20 @@ View.prototype = {
 			chains instanceof Function ? [chains, extraSpec] : chains
 		)
 	},
-	spawnBySpec: function(spec, params, extraSpec, cb){
-		Ctrl.prototype.spawnBySpec.call(
-			this,
-			spec,
-			params,
-			extraSpec,
-			cb,
-			specMgr.findAllByType('view', spec, true)
-		)
-	}
+	spawnBySpec: function(spec, params, extraSpec, cb, list){
+		list = (list || []).concat(specMgr.findAllByType('view', spec, true))
+		if (!list.length) return  cb && cb()
+		list.push(cb, extraSpec)
+		return this.spawn(list.shift(), params, extraSpec, list)
+	},
+	slots: {
+	},
 }
 
 return View
 //# sourceURL=p/View
 })
-pico.define('cfg/xin.json','[["shared","type","shared",["data","routes","name","options","env"]],["models","type","models",["data","routes","name","options","ums","env"]],["cognito","type","aws/cognito",["company","user","config"]],["s3bucket","type","aws/s3bucket",["ums"]],["body","view",[["options","map",{"el":"body"}],["configRO","shared",[["routes","map",{"read":":DOMAIN/config/mailbox/name/:name"}],["name","text","config"],["options","map",{"idAttr":"name"}],["env","ref","env"]]],["ums","cognito",[["company","text","kloudkonsole"],["env","ref","env"],["user","shared",[["routes","map",{"create":":DOMAIN/user/create"}],["options","map",{"idAttr":"username"}],["env","ref","env"]]],["config","ref","configRO"]]],["bucket","s3bucket",[["ums","ref","ums"]]],["config","models",[["routes","map",{"list":":DOMAIN/config/mailbox","create":":DOMAIN/config/mailbox","read":":DOMAIN/config/mailbox/name/:name","update":":DOMAIN/config/mailbox/:id","delete":":DOMAIN/config/mailbox/name/:name"}],["options","map",{"idAttr":"name"}],["ums","ref","ums"],["env","ref","env"]]],["inbox","models",[["name","text","inbox"],["ums","ref","ums"]]],["mails","models",[["ums","ref","ums"]]],["setting","models",[["name","text","setting"],["ums","ref","ums"],["options","map",{"idAttr":"name"}],["data","list",[{"name":"mailbox","sort":"time","size":25,"index":1,"select":null,"search":null}]]]],["pages","map",{"land":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["ums","ref","ums"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["tpl","file","land/navbar.asp"],["shortcuts","bool",true],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["p/View","view",[["options","map",{"tag":"header","class":"jumbotron has-background main-background"}],["html","file","land/hero.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"why","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/why.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info","class":"section","content":[{"class":"container"}]}],["html","file","land/info.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info2","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/info2.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info3","class":"section","content":[{"class":"container"}]}],["html","file","land/info3.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info4","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/info4.html"]]],["land/footer","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"privacy":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["ums","ref","ums"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["tpl","file","land/navbar.asp"],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["p/View","view",[["options","map",{"tag":"section","id":"privacy","class":"section","content":[{"class":"container"}]}],["html","file","land/privacy.html"]]],["land/footer","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"terms":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["ums","ref","ums"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["tpl","file","land/navbar.asp"],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["p/View","view",[["options","map",{"tag":"section","id":"privacy","class":"section","content":[{"class":"container"}]}],["html","file","land/terms.html"]]],["land/footer","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"auth":["auth/layout","view",[["options","map",{"el":"body","class":"login-layout"}],["html","file","auth/layout.html"],["css","file","home/layout.css"],["shared","refs","shared"],["models","refs","models"],["ums","ref","ums"],["auth/navbar","view",[["options","map",{"class":"navbar-fixed-top align-right"}],["html","file","auth/navbar.html"]]],["auth/title","view",[["options","map",{"class":"center"}],["tpl","file","auth/title.asp"],["appIcon","text","fa-inbox"],["appName","list",["Kloud","Konsole"]],["companyName","text","Jasa Web Services"]]],["p/View","view",[["options","map",{"class":"space-6"}]]],["auth/modal","view",[["options","map",{"class":"position-relative"}],["tpl","file","auth/modal.asp"],["ums","ref","ums"],["config","ref","configRO"],["enableRegister","bool",true]]]]],"home":["p/View","view",[["options","map",{"el":"body","class":"no-skin"}],["css","file","home/layout.css"],["ums","ref","ums"],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["p/View","view",[["options","map",{"id":"navbar","class":"navbar navbar-default ace-save-state","content":[{"id":"navbar-container","class":"navbar-container ace-save-state"}]}],["ums","ref","ums"],["models","refs","models"],["p/View","view",[["options","map",{"tag":"button","id":"menu-toggler","class":"navbar-toggle menu-toggler pull-left","data":{"target":"#sidebar"},"content":[{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"}]}]]],["home/navbar-header","view",[["options","map",{"class":"navbar-header pull-left"}],["tpl","file","home/navbar-header.asp"],["icon","text","fa-inbox"],["name","text","Kloud Konsole"]]],["home/navbar-menu","view",[["options","map",{"class":"navbar-header navbar-buttons pull-right","role":"navigation","content":[{"tag":"ul","class":"nav ace-nav"}]}],["ums","ref","ums"],["inbox","ref","inbox"],["home/navbar-menu-content","view",[["options","map",{"tag":"li","class":"light-blue dropdown-modal"}],["tpl","file","home/navbar-menu-content.asp"],["greet","text","Welcome,"],["photo","text","dat/avatar2.png"],["icon_right","text","fa-caret-down"],["ums","ref","ums"],["inbox","ref","inbox"],["home/navbar-menu-user","view",[["options","map",{"tag":"ul","class":"user-menu dropdown-menu-right dropdown-menu dropdown-yellow dropdown-caret dropdown-close"}],["ums","ref","ums"],["inbox","ref","inbox"],["html","file","home/navbar-menu-user.html"]]]]]]]]],["home/main-container","view",[["options","map",{"id":"main-container","class":"main-container ace-save-state"}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["ums","ref","ums"],["menu","models",[["data","list",[{"id":1,"perm":[],"name":"Dashboard","icon":"fa-tachometer","href":"#/dash","shortcut":123},{"id":10,"perm":[0,1],"name":"Mailbox","icon":"fa-inbox","href":"#/dash/mail","shortcut":124},{"id":20,"perm":[1,0],"name":"Settings","icon":"fa-cogs"},{"id":21,"perm":[1,0],"name":"New Email Account","icon":"far fa-plus-square","parent":20,"href":"#/dash/config/mailbox","shortcut":1548192889},{"id":22,"perm":[1,0],"name":"Email Accounts","icon":"far fa-list","parent":20,"href":"#/dash/config/mailboxes","shortcut":15481929889}]]]],["home/sidebar","view",[["options","map",{"id":"sidebar","class":"sidebar responsive ace-save-state"}],["tpl","file","home/sidebar.asp"],["menu","ref","menu"],["config","ref","configRO"]]],["home/main-content","view",[["options","map",{"class":"main-content","content":[{"class":"main-content-inner"}]}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["ums","ref","ums"],["home/breadcrumbs","view",[["options","map",{"id":"breadcrumbs","class":"breadcrumbs ace-save-state"}],["html","file","home/breadcrumbs.html"],["tpl","file","home/breadcrumb.asp"],["ums","ref","ums"],["breadcrumbs","models",[["name","text","breadcrumb"],["ums","ref","ums"]]],["menu","ref","menu"]]],["p/View","view",[["options","map",{"class":"page-content"}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"],["p/View","view",[["options","map",{"id":"ace-settings-container","class":"ace-settings-container"}],["html","file","home/settings-container.html"]]],["home/page-header","view",[["options","map",{"class":"page-header"}],["tpl","file","home/page-header.asp"]]],["home/page-content","view",[["options","map",{"class":"row","content":[{"class":"col-ex-12"}]}],["bucket","ref","bucket"],["shared","refs","shared"],["models","refs","models"]]]]]]],["p/View","view",[["options","map",{"class":"footer","content":[{"class":"footer-inner","content":[{"class":"footer-content"}]}]}],["html","file","home/footer.html"]]],["home/scrollup","view",[["options","map",{"tag":"a","id":"btn-scroll-up","class":"btn-scroll-up btn btn-sm btn-inverse","href":"#","content":[{"tag":"i","class":"ace-icon fa fa-angle-double-up icon-only bigger-110"}]}]]]]]]],"mailbox":["email/frame","view",[["title","text","Mailbox"],["desc","text","mails from your s3 bucket"],["tpl","file","email/frame.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"],["mails","ref","mails"],["setting","ref","setting"],["email/mailbox","view",[["options","map",{"el":".message-list-container"}],["tpl","file","email/mailbox.asp"],["inbox","ref","inbox"],["setting","ref","setting"]]]]],"mail":["email/mail","view",[["title","text","Mail"],["desc","text","mail"],["tpl","file","email/mail.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"],["mails","ref","mails"],["setting","ref","setting"]]],"config/mailbox":["config/mailbox","view",[["title","text","Config"],["desc","text","create a new mailbox"],["html","file","config/mailbox.html"],["config","ref","config"]]],"config/mailboxes":["config/mailboxes","view",[["title","text","Config"],["desc","text","list of your mailboxes"],["html","file","config/mailboxes.html"],["config","ref","config"]]],"empty":["p/View","view",[["title","text","Dashboard"],["desc","text","Coming soon"],["html","file","home/empty.html"]]]}],["routes","map",{"/":["land"],"/privacy":["privacy"],"/terms":["terms"],"/auth":["auth"],"/dash":["home","empty"],"/dash/mail":["home","mailbox"],"/dash/mail/view/:id":["home","mail"],"/dash/config/mailbox":["home","config/mailbox"],"/dash/config/mailbox/:name":["home","config/mailbox"],"/dash/config/mailboxes":["home","config/mailboxes"]}]]]]')
+pico.define('cfg/xin.json','[["shared","type","shared",["data","routes","name","options","env"]],["models","type","models",["data","routes","name","options","ums","env"]],["cognito","type","aws/cognito",["company","user","config"]],["s3bucket","type","aws/s3bucket",["ums"]],["body","view",[["options","map",{"el":"body"}],["configRO","shared",[["routes","map",{"read":":DOMAIN/config/mailbox/name/:name"}],["name","text","config"],["options","map",{"idAttr":"name"}],["env","ref","env"]]],["ums","cognito",[["company","text","kloudkonsole"],["env","ref","env"],["user","shared",[["routes","map",{"create":":DOMAIN/user/create"}],["options","map",{"idAttr":"username"}],["env","ref","env"]]],["config","ref","configRO"]]],["bucket","s3bucket",[["ums","ref","ums"]]],["config","models",[["routes","map",{"list":":DOMAIN/config/mailbox","create":":DOMAIN/config/mailbox","read":":DOMAIN/config/mailbox/name/:name","update":":DOMAIN/config/mailbox/:id","delete":":DOMAIN/config/mailbox/name/:name"}],["options","map",{"idAttr":"name"}],["ums","ref","ums"],["env","ref","env"]]],["inbox","models",[["name","text","inbox"],["ums","ref","ums"]]],["mails","models",[["ums","ref","ums"]]],["setting","models",[["name","text","setting"],["ums","ref","ums"],["options","map",{"idAttr":"name"}],["data","list",[{"name":"mailbox","sort":"time","size":25,"index":1,"select":null,"search":null}]]]],["pages","map",{"land":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["tpl","file","land/navbar.asp"],["shortcuts","bool",true],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["p/View","view",[["options","map",{"tag":"header","class":"jumbotron has-background main-background"}],["html","file","land/hero.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"why","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/why.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info","class":"section","content":[{"class":"container"}]}],["html","file","land/info.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info2","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/info2.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info3","class":"section","content":[{"class":"container"}]}],["html","file","land/info3.html"]]],["p/View","view",[["options","map",{"tag":"section","id":"info4","class":"section section-grey","content":[{"class":"container"}]}],["html","file","land/info4.html"]]],["land/footer","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"privacy":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["tpl","file","land/navbar.asp"],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["p/View","view",[["options","map",{"tag":"section","id":"privacy","class":"section","content":[{"class":"container"}]}],["html","file","land/privacy.html"]]],["land/footer","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"terms":["land/layout","view",[["options","map",{"el":"body","class":"no-skin pos-rel","data":{"spy":"scroll","target":"#menu"}}],["css","file","land/layout.css"],["land/navbar","view",[["options","map",{"id":"navbar","class":"navbar navbar-default navbar-fixed-top","content":[{"id":"navbar-container","class":"navbar-container container"}]}],["tpl","file","land/navbar.asp"],["ums","ref","ums"]]],["p/View","view",[["options","map",{"id":"top","class":"main-container"}],["p/View","view",[["options","map",{"tag":"section","id":"privacy","class":"section","content":[{"class":"container"}]}],["html","file","land/terms.html"]]],["land/footer","view",[["options","map",{"tag":"footer","id":"footer","class":"section","content":[{"class":"container"}]}],["html","file","land/footer.html"]]]]]]],"auth":["auth/layout","view",[["options","map",{"el":"body","class":"login-layout"}],["html","file","auth/layout.html"],["css","file","home/layout.css"],["auth/navbar","view",[["options","map",{"class":"navbar-fixed-top align-right"}],["html","file","auth/navbar.html"]]],["auth/title","view",[["options","map",{"class":"center"}],["tpl","file","auth/title.asp"],["appIcon","text","fa-inbox"],["appName","list",["Kloud","Konsole"]],["companyName","text","Jasa Web Services"]]],["p/View","view",[["options","map",{"class":"space-6"}]]],["auth/modal","view",[["options","map",{"class":"position-relative"}],["tpl","file","auth/modal.asp"],["ums","ref","ums"],["config","ref","configRO"],["enableRegister","bool",true]]]]],"home":["p/View","view",[["options","map",{"el":"body","class":"no-skin"}],["css","file","home/layout.css"],["p/View","view",[["options","map",{"id":"navbar","class":"navbar navbar-default ace-save-state","content":[{"id":"navbar-container","class":"navbar-container ace-save-state"}]}],["p/View","view",[["options","map",{"tag":"button","id":"menu-toggler","class":"navbar-toggle menu-toggler pull-left","data":{"target":"#sidebar"},"content":[{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"},{"tag":"span","class":"icon-bar"}]}]]],["home/navbar-header","view",[["options","map",{"class":"navbar-header pull-left"}],["tpl","file","home/navbar-header.asp"],["icon","text","fa-inbox"],["config","ref","configRO"]]],["home/navbar-menu","view",[["options","map",{"class":"navbar-header navbar-buttons pull-right","role":"navigation","content":[{"tag":"ul","class":"nav ace-nav"}]}],["home/navbar-menu-content","view",[["options","map",{"tag":"li","class":"light-blue dropdown-modal"}],["tpl","file","home/navbar-menu-content.asp"],["greet","text","Welcome,"],["photo","text","dat/avatar2.png"],["icon_right","text","fa-caret-down"],["ums","ref","ums"],["inbox","ref","inbox"],["home/navbar-menu-user","view",[["options","map",{"tag":"ul","class":"user-menu dropdown-menu-right dropdown-menu dropdown-yellow dropdown-caret dropdown-close"}],["html","file","home/navbar-menu-user.html"],["ums","ref","ums"],["inbox","ref","inbox"]]]]]]]]],["home/main-container","view",[["options","map",{"id":"main-container","class":"main-container ace-save-state"}],["menu","models",[["data","list",[{"id":1,"perm":[],"name":"Dashboard","icon":"fa-tachometer","href":"#/dash","shortcut":123},{"id":10,"perm":[0,1],"name":"Mailbox","icon":"fa-inbox","href":"#/dash/mail","shortcut":124},{"id":20,"perm":[1,0],"name":"Settings","icon":"fa-cogs"},{"id":21,"perm":[1,0],"name":"New Email Account","icon":"far fa-plus-square","parent":20,"href":"#/dash/config/mailbox","shortcut":1548192889},{"id":22,"perm":[1,0],"name":"Email Accounts","icon":"far fa-list","parent":20,"href":"#/dash/config/mailboxes","shortcut":15481929889}]]]],["home/sidebar","view",[["options","map",{"id":"sidebar","class":"sidebar responsive ace-save-state"}],["tpl","file","home/sidebar.asp"],["menu","ref","menu"],["config","ref","configRO"]]],["home/main-content","view",[["options","map",{"class":"main-content","content":[{"class":"main-content-inner"}]}],["home/breadcrumbs","view",[["options","map",{"id":"breadcrumbs","class":"breadcrumbs ace-save-state"}],["html","file","home/breadcrumbs.html"],["tpl","file","home/breadcrumb.asp"],["menu","ref","menu"],["ums","ref","ums"],["breadcrumbs","models",[["name","text","breadcrumb"],["ums","ref","ums"]]]]],["p/View","view",[["options","map",{"class":"page-content"}],["p/View","view",[["options","map",{"id":"ace-settings-container","class":"ace-settings-container"}],["html","file","home/settings-container.html"]]],["home/page-header","view",[["options","map",{"class":"page-header"}],["tpl","file","home/page-header.asp"]]],["home/page-content","view",[["options","map",{"class":"row","content":[{"class":"col-ex-12"}]}]]]]]]],["p/View","view",[["options","map",{"class":"footer","content":[{"class":"footer-inner","content":[{"class":"footer-content"}]}]}],["html","file","home/footer.html"]]],["home/scrollup","view",[["options","map",{"tag":"a","id":"btn-scroll-up","class":"btn-scroll-up btn btn-sm btn-inverse","href":"#","content":[{"tag":"i","class":"ace-icon fa fa-angle-double-up icon-only bigger-110"}]}]]]]]]],"mailbox":["email/frame","view",[["title","text","Mailbox"],["desc","text","mails from your s3 bucket"],["tpl","file","email/frame.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"],["mails","ref","mails"],["setting","ref","setting"],["email/mailbox","view",[["options","map",{"el":".message-list-container"}],["tpl","file","email/mailbox.asp"],["inbox","ref","inbox"],["setting","ref","setting"]]]]],"mail":["email/mail","view",[["title","text","Mail"],["desc","text","mail"],["tpl","file","email/mail.asp"],["bucket","ref","bucket"],["inbox","ref","inbox"],["mails","ref","mails"],["setting","ref","setting"]]],"config/mailbox":["config/mailbox","view",[["title","text","Config"],["desc","text","create a new mailbox"],["html","file","config/mailbox.html"],["config","ref","config"]]],"config/mailboxes":["config/mailboxes","view",[["title","text","Config"],["desc","text","list of your mailboxes"],["html","file","config/mailboxes.html"],["config","ref","config"]]],"empty":["p/View","view",[["title","text","Dashboard"],["desc","text","Coming soon"],["html","file","home/empty.html"]]]}],["routes","map",{"/":["land"],"/privacy":["privacy"],"/terms":["terms"],"/auth":["auth"],"/dash":["home","empty"],"/dash/mail":["home","mailbox"],"/dash/mail/view/:id":["home","mail"],"/dash/config/mailbox":["home","config/mailbox"],"/dash/config/mailbox/:name":["home","config/mailbox"],"/dash/config/mailboxes":["home","config/mailboxes"]}]]]]')
 pico.define('cfg/env.json','[["env","map",{"DOMAIN":"https://xin.jasaws.com"}]]')
 pico.define('xin',function anonymous(exports,require,module,define,inherit,pico
 ) {
@@ -1683,7 +1615,7 @@ const specMgr = require('p/specMgr')
 
 function changeContent(state, params){
 	if (!state) return
-	this.signals.changeContent(state, this.specMap[state], params).send([this.host])
+	this.signal.changeContent(state, this.specMap[state], params).send([this.host])
 }
 
 function pageChanged(evt, states, params){
@@ -2064,13 +1996,14 @@ const router = require('po/router')
 
 return {
 	deps: {
-		name: ['text', 'Home'],
 		icon: ['text', 'fa-home'],
+		config: 'models',
 		tpl: 'file'
 	},
 	create(deps, params){
 		setTimeout(() => {
-			this.el.innerHTML = deps.tpl(deps)
+			const { name } = deps.config.getSelected()
+			this.el.innerHTML = deps.tpl(Object.assign(deps, {name}))
 		}, 0)
 	},
 	events: {
@@ -2388,7 +2321,7 @@ return {
 		this.super.create.call(this, deps, params)
 	},
 	render(){
-		this.signals.moduleAdded().send(this.host)
+		this.signal.moduleAdded().send(this.host)
 		return this.el
 	},
 	slots: {
@@ -2540,7 +2473,7 @@ return {
 			if (config.sort === sort) return
 			config.sort = sort
 			update.call(this)
-			//this.signals.mailboxRefresh().send([this.host])
+			//this.signal.mailboxRefresh().send([this.host])
 		},
 		'click ul.pagination li': function(evt, target){
 			evt.preventDefault()
@@ -2566,22 +2499,22 @@ return {
 			}
 			config.index = index
 			update.call(this)
-			//this.signals.mailboxRefresh().send([this.host])
+			//this.signal.mailboxRefresh().send([this.host])
 		},
 		'input .nav-search-input': function(evt, target){
 			const config = this.deps.setting.get('mailbox')
 			config.search = target.value.toLowerCase()
-			this.signals.mailboxRefresh(target.value.toLowerCase()).send([this.host])
+			this.signal.mailboxRefresh(target.value.toLowerCase()).send([this.host])
 		},
 		'click .select-message': function(evt, target){
 			const config = this.deps.setting.get('mailbox')
 			config.select = target.id.slice('id-select-message-'.length)
-			this.signals.mailboxRefresh().send([this.host])
+			this.signal.mailboxRefresh().send([this.host])
 		},
 		'change #id-toggle-all': function(evt, target){
 			const config = this.deps.setting.get('mailbox')
 			config.select = target.checked ? 'all' : 'none'
-			this.signals.mailboxRefresh().send([this.host])
+			this.signal.mailboxRefresh().send([this.host])
 		}
 	}
 }
